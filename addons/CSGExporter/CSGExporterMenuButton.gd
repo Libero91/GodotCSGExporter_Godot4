@@ -1,26 +1,29 @@
-tool
+@tool
 extends MenuButton
 
 enum EXPORT_TYPE {OBJ}
 
 signal finished_exporting
 
-var focused_csg_mesh : CSGShape
+var focused_csg_mesh : CSGShape3D
 var file_dialog : FileDialog
 var export_type
 
 func _ready():
-	get_popup().connect("index_pressed", self, "_on_popup_index_pressed")
-	
+	var popup := get_popup()
+	popup.clear()
+	popup.add_item("Export OBJ", 0)
+	popup.index_pressed.connect(_on_popup_index_pressed)
+
 	file_dialog = $FileDialog
-	file_dialog.mode = FileDialog.MODE_SAVE_FILE
+	file_dialog.file_mode = FileDialog.FILE_MODE_SAVE_FILE
 	file_dialog.access = FileDialog.ACCESS_FILESYSTEM
-	file_dialog.connect("file_selected", self, "_on_file_selected")
+	file_dialog.file_selected.connect(_on_file_selected)
 
 func _on_popup_index_pressed(id : int):
 	if (id == 0):
 		export_type = EXPORT_TYPE.OBJ
-		file_dialog.show()
+		file_dialog.popup_centered()
 
 func _on_file_selected(path : String):
 	if (export_type == EXPORT_TYPE.OBJ):
@@ -38,7 +41,7 @@ func _save_mesh_to_obj(path : String):
 	objcont+="o ./" + path.get_file() + "\n";
 	
 	# Blank material
-	var blank_material = SpatialMaterial.new()
+	var blank_material = StandardMaterial3D.new()
 	blank_material.resource_name = "BlankMaterial"
 	
 	#Get surfaces and mesh info
@@ -47,7 +50,7 @@ func _save_mesh_to_obj(path : String):
 		var verts = surface[0]
 		var UVs = surface[4]
 		var normals = surface[1]
-		var mat : SpatialMaterial = csgMesh[-1].surface_get_material(t)
+		var mat : StandardMaterial3D = csgMesh[-1].surface_get_material(t)
 		if (mat == null):
 			mat = blank_material
 		var faces = []
@@ -92,13 +95,11 @@ func _save_mesh_to_obj(path : String):
 		matcont+=str("d ",mat.albedo_color.a)+"\n"
 
 	#Write to files
-	var objfile = File.new()
-	objfile.open(path + ".obj", File.WRITE)
+	var objfile = FileAccess.open(path + ".obj", FileAccess.WRITE)
 	objfile.store_string(objcont)
 	objfile.close()
 	
-	var mtlfile = File.new()
-	mtlfile.open(path + ".mtl", File.WRITE)
+	var mtlfile = FileAccess.open(path + ".mtl", FileAccess.WRITE)
 	mtlfile.store_string(matcont)
 	mtlfile.close()
 	
